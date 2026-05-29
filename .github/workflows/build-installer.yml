@@ -1,0 +1,37 @@
+name: Build Installer (NSIS)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Publish SysScanNative
+        working-directory: SysScanNative
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o ../publish
+
+      - name: Install NSIS
+        run: choco install nsis -y
+
+      - name: Build NSIS installer
+        run: |
+          if (!(Test-Path publish)) { Write-Error 'publish folder missing'; exit 1 }
+          "C:\\Program Files (x86)\\NSIS\\makensis.exe" ".\\installer\\SysScanInstaller.nsi"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SysScanNative-installer
+          path: SysScanNativeInstaller-*.exe
